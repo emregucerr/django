@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.db import DEFAULT_DB_ALIAS, connections
 from django.db.migrations.executor import MigrationExecutor
@@ -32,13 +33,17 @@ class Command(BaseCommand):
         # Get the database we're operating from
         connection = connections[options['database']]
 
+        # Check if app_label is in INSTALLED_APPS
+        if app_label not in settings.INSTALLED_APPS:
+            raise CommandError("App '%s' is not in INSTALLED_APPS" % app_label)
+
         # Load up an executor to get all the migration data
         executor = MigrationExecutor(connection)
 
         # Resolve command-line arguments into a migration
         app_label, migration_name = options['app_label'], options['migration_name']
         if app_label not in executor.loader.migrated_apps:
-            raise CommandError("App '%s' does not have migrations" % app_label)
+            raise CommandError("No migrations found for the app label '%s'." % app_label)
         try:
             migration = executor.loader.get_migration_by_prefix(app_label, migration_name)
         except AmbiguityError:
