@@ -273,6 +273,17 @@ def make_aware(value, timezone=None, is_dst=None):
         if is_aware(value):
             raise ValueError(
                 "make_aware expects a naive datetime, got %s" % value)
+        # Provide a warning regarding the is_dst flag when it's not usable.
+        if is_dst is not None:
+            raise NotImplementedError(
+                "make_aware cannot use the is_dst flag with time zones that do "
+                "not provide a localize method. The is_dst flag is ignored, and this "
+                "may lead to incorrect behavior around DST changes."
+            )
+        # Check that we won't overwrite the timezone of an aware datetime.
+        if is_aware(value):
+            raise ValueError(
+                "make_aware expects a naive datetime, got %s" % value)
         # This may be wrong around DST changes!
         return value.replace(tzinfo=timezone)
 
