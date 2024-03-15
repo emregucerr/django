@@ -23,7 +23,7 @@ def supports_color():
 
 
 class Style:
-    pass
+    _force_color = False
 
 
 def make_style(config_string=''):
@@ -64,10 +64,12 @@ def no_style():
     return make_style('nocolor')
 
 
-def color_style():
+def color_style(force_color=False):
     """
     Return a Style object from the Django color scheme.
     """
-    if not supports_color():
+    global _force_color
+    _force_color = force_color
+    if not supports_color() and not _force_color:
         return no_style()
     return make_style(os.environ.get('DJANGO_COLORS', ''))

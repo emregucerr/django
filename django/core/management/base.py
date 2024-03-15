@@ -227,11 +227,15 @@ class BaseCommand:
     # Command-specific options not defined by the argument parser.
     stealth_options = ()
 
-    def __init__(self, stdout=None, stderr=None, no_color=False):
+    def __init__(self, stdout=None, stderr=None, no_color=False, force_color=False):
         self.stdout = OutputWrapper(stdout or sys.stdout)
         self.stderr = OutputWrapper(stderr or sys.stderr)
+        self.force_color = force_color
         if no_color:
             self.style = no_style()
+        elif force_color:
+            self.style = color_style(force_color=True)
+            self.stderr.style_func = self.style.ERROR
         else:
             self.style = color_style()
             self.stderr.style_func = self.style.ERROR
@@ -279,6 +283,10 @@ class BaseCommand:
         parser.add_argument(
             '--no-color', action='store_true',
             help="Don't colorize the command output.",
+        )
+        parser.add_argument(
+            '--force-color', action='store_true',
+            help='Force colorization of the output.',
         )
         self.add_arguments(parser)
         return parser
@@ -342,6 +350,9 @@ class BaseCommand:
         if options['no_color']:
             self.style = no_style()
             self.stderr.style_func = None
+        elif options.get('force_color'):
+            self.style = color_style(force_color=True)
+            self.stderr.style_func = self.style.ERROR
         if options.get('stdout'):
             self.stdout = OutputWrapper(options['stdout'])
         if options.get('stderr'):
