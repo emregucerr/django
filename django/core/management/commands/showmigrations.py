@@ -39,10 +39,15 @@ class Command(BaseCommand):
         db = options['database']
         connection = connections[db]
 
+        app_labels = options['app_label']
+        if app_labels:
+            loader = MigrationLoader(connection, ignore_no_migrations=True)
+            self._validate_app_names(loader, app_labels)
+
         if options['format'] == "plan":
-            return self.show_plan(connection, options['app_label'])
+            return self.show_plan(connection, app_labels)
         else:
-            return self.show_list(connection, options['app_label'])
+            return self.show_list(connection, app_labels)
 
     def _validate_app_names(self, loader, app_names):
         invalid_apps = []
@@ -60,11 +65,8 @@ class Command(BaseCommand):
         # Load migrations from disk/DB
         loader = MigrationLoader(connection, ignore_no_migrations=True)
         graph = loader.graph
-        # If we were passed a list of apps, validate it
-        if app_names:
-            self._validate_app_names(loader, app_names)
-        # Otherwise, show all apps in alphabetic order
-        else:
+        # Show all apps in alphabetic order if no specific app_names provided
+        if not app_names:
             app_names = sorted(loader.migrated_apps)
         # For each app, print its migrations in order from oldest (roots) to
         # newest (leaves).
@@ -97,7 +99,6 @@ class Command(BaseCommand):
         loader = MigrationLoader(connection)
         graph = loader.graph
         if app_names:
-            self._validate_app_names(loader, app_names)
             targets = [key for key in graph.leaf_nodes() if key[0] in app_names]
         else:
             targets = graph.leaf_nodes()
