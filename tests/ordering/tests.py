@@ -3,6 +3,7 @@ from operator import attrgetter
 
 from django.db.models import Count, DateTimeField, F, Max, OuterRef, Subquery
 from django.db.models.functions import Upper
+from django.core import checks
 from django.test import TestCase
 from django.utils.deprecation import RemovedInDjango31Warning
 
@@ -412,3 +413,35 @@ class OrderingTests(TestCase):
         )
         with self.assertRaisesMessage(RemovedInDjango31Warning, msg):
             list(Article.objects.values('author').annotate(Count('headline')))
+from django.test import TestCase
+
+from django.db import models
+
+class RelatedOrderingCheckTests(TestCase):
+
+    def test_nonexistent_related_field(self):
+        class FakeRelatedModel(models.Model):
+            class Meta:
+                ordering = ['nonexistent__id']
+
+        errors = FakeRelatedModel.check()
+        expected_error = checks.Error(
+            "The field 'nonexistent' does not exist on the model 'FakeRelatedModel'.",
+            obj=FakeRelatedModel,
+            id='models.E015',
+            hint="Check that 'ordering' refers to a valid field of the model.",
+        )
+        self.assertEqual(errors, [expected_error])
+
+    def test_valid_related_field(self):
+        class RelatedModel(models.Model):
+            pass
+
+        class FakeRelatedModel(models.Model):
+            related = models.ForeignKey(RelatedModel, on_delete=models.CASCADE)
+
+            class Meta:
+                ordering = ['related__id']
+
+        errors = FakeRelatedModel.check()
+        self.assertEqual(errors, [])

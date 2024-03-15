@@ -1082,6 +1082,7 @@ class Model(metaclass=ModelBase):
                     key = NON_FIELD_ERRORS
                 errors.setdefault(key, []).append(self.unique_error_message(model_class, unique_check))
 
+        errors.extend(cls._check_ordering_related_fields())
         return errors
 
     def _perform_date_checks(self, date_checks):
