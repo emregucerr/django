@@ -190,7 +190,8 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         conn.create_function('LOG', 2, lambda x, y: math.log(y, x))
         conn.create_function('MOD', 2, math.fmod)
         conn.create_function('PI', 0, lambda: math.pi)
-        conn.create_function('POWER', 2, operator.pow)
+        # Register the safe exponentiation function to handle NULL values
+        conn.create_function('POWER', 2, lambda x, y: _sqlite_safe_exponentiation(x, y))
         conn.create_function('RADIANS', 1, math.radians)
         conn.create_function('SIN', 1, math.sin)
         conn.create_function('SQRT', 1, math.sqrt)
@@ -453,6 +454,8 @@ def _sqlite_format_dtdelta(conn, lhs, rhs):
 
 
 def _sqlite_time_diff(lhs, rhs):
+    if lhs is None or rhs is None:
+        return None
     left = backend_utils.typecast_time(lhs)
     right = backend_utils.typecast_time(rhs)
     return (
@@ -468,6 +471,8 @@ def _sqlite_time_diff(lhs, rhs):
 
 
 def _sqlite_timestamp_diff(lhs, rhs):
+    if lhs is None or rhs is None:
+        return None
     left = backend_utils.typecast_timestamp(lhs)
     right = backend_utils.typecast_timestamp(rhs)
     return duration_microseconds(left - right)
@@ -478,10 +483,23 @@ def _sqlite_regexp(re_pattern, re_string):
 
 
 def _sqlite_lpad(text, length, fill_text):
+    if text is None or length is None or fill_text is None:
+        return None
     if len(text) >= length:
         return text[:length]
     return (fill_text * length)[:length - len(text)] + text
 
 
 def _sqlite_rpad(text, length, fill_text):
+    if text is None or length is None or fill_text is None:
+        return None
     return (text + fill_text * length)[:length]
+
+# Define a safe exponentiation function that handles NULL values
+def _sqlite_safe_exponentiation(lhs, rhs):
+    if lhs is None or rhs is None:
+        return None
+    try:
+        return pow(lhs, rhs)
+    except (TypeError, ValueError, OverflowError):
+        return None
